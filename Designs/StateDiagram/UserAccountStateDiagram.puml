@@ -1,1 +1,14 @@
+@startuml
 
+title User Account State Diagram
+
+[*] --> Active : Account activated
+
+Active --> Inactive : Admin deactivates account
+
+Inactive --> Active : Admin activates account
+
+Active --> [*] : Account ends
+Inactive --> [*] : Account ends
+
+@enduml
