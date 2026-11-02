@@ -1,1 +1,19 @@
+@startuml
 
+title Ticket State Diagram
+
+skinparam shadowing false
+skinparam linetype ortho
+
+[*] --> Open : Student submits ticket
+
+Open --> InProgress : Staff starts processing
+
+InProgress --> Resolved : Request successfully resolved
+
+InProgress --> Rejected : Request rejected
+
+Resolved --> [*]
+Rejected --> [*]
+
+@enduml
