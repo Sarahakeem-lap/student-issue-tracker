@@ -1,1 +1,15 @@
+@startuml
 
+title Payment Verification State Diagram
+
+[*] --> Verified : Payment successfully verified
+
+[*] --> NotFound : Transaction not found
+
+[*] --> AlreadyUsed : Transaction already used
+
+Verified --> [*]
+NotFound --> [*]
+AlreadyUsed --> [*]
+
+@enduml
