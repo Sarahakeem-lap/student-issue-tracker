@@ -1,1 +1,196 @@
+@startuml
 
+title College Student Affairs Management System
+
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+' =================================
+' 1. USER CLASSES
+' =================================
+
+abstract class User {
+  - userId: int
+  - name: String
+  - email: String
+  - passwordHash: String
+  - isActive: Boolean
+  + login()
+  + logout()
+}
+
+class Student {
+  - nationalId: String
+  - studentCode: String
+  + createTicket()
+  + trackTicket()
+}
+
+class AffairsStaff {
+  - department: String
+  - permissions: String
+  + viewTickets()
+  + filterTicketsByCategory()
+  + updateTicketStatus()
+  + resolveTicket()
+  + verifyPayment()
+}
+
+class Admin {
+  + manageKnowledgeBase()
+  + manageStaffAccounts()
+  + manageStaffPermissions()
+  + generateReport()
+}
+
+User <|-- Student
+User <|-- AffairsStaff
+User <|-- Admin
+
+
+' =================================
+' 2. TICKET CLASSES
+' =================================
+
+class Ticket {
+  - ticketId: int
+  - trackingCode: String
+  - title: String
+  - description: String
+  - status: TicketStatus
+  - createdAt: Date
+  + createTicket()
+  + updateStatus()
+  + getDetails()
+}
+
+enum TicketStatus {
+  Open
+  InProgress
+  Resolved
+  Rejected
+}
+
+class TicketCategory {
+  - categoryId: int
+  - categoryName: String
+}
+
+class TicketComment {
+  - commentId: int
+  - content: String
+  - createdAt: Date
+  - commentType: String
+}
+
+class TicketHistory {
+  - historyId: int
+  - oldStatus: TicketStatus
+  - newStatus: TicketStatus
+  - changedAt: Date
+}
+
+Student "1" -- "0..*" Ticket : creates
+AffairsStaff "0..1" -- "0..*" Ticket : handles
+
+Ticket "0..*" -- "1" TicketCategory : belongs to
+
+Ticket "1" *-- "0..*" TicketComment : contains
+Ticket "1" *-- "0..*" TicketHistory : records
+
+User "1" -- "0..*" TicketComment : writes
+User "1" -- "0..*" TicketHistory : changes
+
+
+' =================================
+' 3. ATTACHMENT CLASSES
+' =================================
+
+class Attachment {
+  - attachmentId: int
+  - fileName: String
+  - filePath: String
+  - fileType: String
+  - fileSize: Double
+  - uploadedAt: Date
+  + uploadFile()
+}
+
+class PaymentReceipt {
+  - transactionId: String
+}
+
+Attachment <|-- PaymentReceipt
+
+Ticket "1" *-- "0..*" Attachment : contains
+
+
+' =================================
+' 4. PAYMENT VERIFICATION
+' =================================
+
+class PaymentVerification {
+  - verificationId: int
+  - verificationResult: VerificationResult
+  - checkedAt: Date
+  + verifyPayment()
+}
+
+enum VerificationResult {
+  Verified
+  NotFound
+  AlreadyUsed
+}
+
+PaymentReceipt "1" -- "0..*" PaymentVerification : has
+AffairsStaff "1" -- "0..*" PaymentVerification : performs
+
+
+' =================================
+' 5. KNOWLEDGE BASE
+' =================================
+
+class KnowledgeArticle {
+  - articleId: int
+  - title: String
+  - content: String
+  - updatedAt: Date
+}
+
+Admin "1" -- "0..*" KnowledgeArticle : manages
+
+
+' =================================
+' 6. EMAIL NOTIFICATION
+' =================================
+
+class EmailNotification {
+  - notificationId: int
+  - emailAddress: String
+  - message: String
+  - sentAt: Date
+  - status: String
+}
+
+Ticket "1" -- "0..*" EmailNotification : triggers
+Student "1" -- "0..*" EmailNotification : receives
+
+EmailNotification ..> TicketComment : includes resolution comment
+
+
+' =================================
+' 7. PERFORMANCE REPORT
+' =================================
+
+class PerformanceReport {
+  - reportId: int
+  - month: String
+  - generatedAt: Date
+  + generate()
+  + exportAsCSV()
+}
+
+Admin ..> PerformanceReport : generates
+PerformanceReport ..> Ticket : reads
+
+@enduml
