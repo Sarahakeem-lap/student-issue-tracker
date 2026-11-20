@@ -1,0 +1,205 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+// ---------- Enums ----------
+enum Role {
+  ADMIN
+  STAFF
+  STUDENT
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  REJECTED
+}
+
+enum VerificationResult {
+  VERIFIED
+  NOT_FOUND
+  ALREADY_USED
+}
+
+enum CommentType {
+  INTERNAL
+  RESOLUTION
+}
+
+// ---------- Users ----------
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(STUDENT)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  studentProfile StudentProfile?
+  staffProfile   StaffProfile?
+
+  ticketsCreated  Ticket[]            @relation("StudentTickets")
+  ticketsAssigned Ticket[]            @relation("StaffTickets")
+  comments        TicketComment[]
+  historyChanges  TicketHistory[]
+  notifications   EmailNotification[]
+  articles        KnowledgeArticle[]
+  reports         PerformanceReport[]
+  verifications   PaymentVerification[]
+}
+
+model StudentProfile {
+  id          Int    @id @default(autoincrement())
+  nationalId  String @unique
+  studentCode String @unique
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      Int    @unique
+}
+
+model StaffProfile {
+  id         Int    @id @default(autoincrement())
+  department String
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     Int    @unique
+}
+
+// ---------- Tickets ----------
+model TicketCategory {
+  id      Int      @id @default(autoincrement())
+  name    String   @unique
+  tickets Ticket[]
+}
+
+model Ticket {
+  id           Int          @id @default(autoincrement())
+  trackingCode String       @unique
+  title        String
+  description  String
+  status       TicketStatus @default(OPEN)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  student    User           @relation("StudentTickets", fields: [studentId], references: [id])
+  studentId  Int
+  staff      User?          @relation("StaffTickets", fields: [staffId], references: [id])
+  staffId    Int?
+  category   TicketCategory @relation(fields: [categoryId], references: [id])
+  categoryId Int
+
+  attachments   Attachment[]
+  history       TicketHistory[]
+  comments      TicketComment[]
+  notifications EmailNotification[]
+
+  @@index([studentId])
+  @@index([staffId])
+  @@index([status])
+}
+
+model TicketHistory {
+  id        Int          @id @default(autoincrement())
+  oldStatus TicketStatus
+  newStatus TicketStatus
+  changedAt DateTime     @default(now())
+
+  ticket      Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticketId    Int
+  changedBy   User   @relation(fields: [changedById], references: [id])
+  changedById Int
+}
+
+model TicketComment {
+  id          Int         @id @default(autoincrement())
+  content     String
+  commentType CommentType @default(INTERNAL)
+  createdAt   DateTime    @default(now())
+
+  ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticketId Int
+  author   User   @relation(fields: [authorId], references: [id])
+  authorId Int
+}
+
+// ---------- Attachments & payment ----------
+model Attachment {
+  id         Int      @id @default(autoincrement())
+  fileName   String
+  filePath   String
+  fileType   String
+  fileSize   Int
+  uploadedAt DateTime @default(now())
+
+  ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticketId Int
+
+  paymentReceipt PaymentReceipt?
+}
+
+model PaymentReceipt {
+  id            Int    @id @default(autoincrement())
+  transactionId String @unique
+
+  attachment   Attachment @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
+  attachmentId Int        @unique
+
+  verifications PaymentVerification[]
+}
+
+model PaymentVerification {
+  id                 Int                @id @default(autoincrement())
+  verificationResult VerificationResult
+  checkedAt          DateTime           @default(now())
+
+  receipt   PaymentReceipt @relation(fields: [receiptId], references: [id])
+  receiptId Int
+  staff     User           @relation(fields: [staffId], references: [id])
+  staffId   Int
+}
+
+// ---------- Notifications ----------
+model EmailNotification {
+  id           Int      @id @default(autoincrement())
+  emailAddress String
+  message      String
+  status       String   @default("PENDING")
+  sentAt       DateTime?
+  createdAt    DateTime @default(now())
+
+  user     User    @relation(fields: [userId], references: [id])
+  userId   Int
+  ticket   Ticket? @relation(fields: [ticketId], references: [id])
+  ticketId Int?
+}
+
+// ---------- Admin ----------
+model KnowledgeArticle {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdBy   User @relation(fields: [createdById], references: [id])
+  createdById Int
+}
+
+model PerformanceReport {
+  id          Int      @id @default(autoincrement())
+  month       String
+  generatedAt DateTime @default(now())
+
+  generatedBy   User @relation(fields: [generatedById], references: [id])
+  generatedById Int
+}
